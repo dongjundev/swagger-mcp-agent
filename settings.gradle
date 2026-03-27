@@ -1,0 +1,7 @@
+rootProject.name = 'swagger-mcp-agent'
+
+include 'swagger-center'
+include 'swagger-mcp'
+include 'ms-user'
+include 'ms-order'
+include 'ms-product'

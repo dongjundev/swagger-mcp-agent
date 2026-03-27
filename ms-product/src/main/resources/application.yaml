@@ -1,0 +1,10 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: ms-product
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs

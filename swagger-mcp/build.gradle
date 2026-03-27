@@ -1,0 +1,13 @@
+ext {
+	set('springAiVersion', "1.1.3")
+}
+
+dependencies {
+	implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
+	}
+}

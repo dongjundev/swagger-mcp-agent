@@ -1,0 +1,16 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: swagger-mcp
+  ai:
+    mcp:
+      server:
+        name: swagger-mcp-server
+        version: 1.0.0
+        type: ASYNC
+        protocol: STATELESS
+
+swagger-center:
+  base-url: http://localhost:8080

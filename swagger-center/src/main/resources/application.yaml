@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: swagger-center
+  jackson:
+    default-property-inclusion: non_null
+
+springdoc:
+  use-fqn: true
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
