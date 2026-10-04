@@ -7,7 +7,7 @@
 ```
 [MCP Inspector]
     ↕ Streamable-HTTP (POST /mcp)
-[swagger-mcp :8081]  ← Tool 4개
+[swagger-mcp :8081]  ← Tool 4개, Prompt 1개
     ↕ REST
 [swagger-center :8080]  ← 스펙 저장소
     ↑ 스펙 등록 (curl)
@@ -127,6 +127,7 @@ Inspector UI에서:
 - `getApiList` 선택
 - 파라미터: `serviceName` = `ms-user`, `page` = `0`, `size` = `20`
 - 기대 결과: listUsers, getUser, createUser, deleteUser 4개 API
+- `keyword` = `삭제` 를 추가하면 deleteUser 1개만 반환
 
 ### 5-3. getApiDetail 테스트
 - `getApiDetail` 선택
@@ -137,6 +138,11 @@ Inspector UI에서:
 - `getComponentSchema` 선택
 - 파라미터: `serviceName` = `ms-product`, `schemaName` = `ProductDto`
 - 기대 결과: id, name, category, price, stock 필드 스키마
+
+### 5-5. search-apis 프롬프트 테스트
+- Prompts 탭 → `search-apis` 선택
+- 파라미터: `serviceName` = `ms-order`, `apiDesc` = `주문 취소`
+- 기대 결과: getApiList → getApiDetail → getComponentSchema 순서로 조회하라는 user 메시지
 
 ---
 
@@ -164,6 +170,7 @@ Inspector에서 순차적으로:
 | 8 | getApiList → API 목록 반환 | ☐ |
 | 9 | getApiDetail → 상세 정보 반환 | ☐ |
 | 10 | getComponentSchema → 스키마 반환 | ☐ |
+| 11 | search-apis 프롬프트 → 메시지 반환 | ☐ |
 
 ## 트러블슈팅
 

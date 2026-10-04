@@ -24,10 +24,10 @@ public class SwaggerCenterClient {
                 });
     }
 
-    public PagedResponse<ApiSummary> getApiList(String serviceName, int page, int size) {
+    public PagedResponse<ApiSummary> getApiList(String serviceName, String keyword, int page, int size) {
         return restClient.get()
-                .uri("/api/services/{serviceName}/apis?page={page}&size={size}",
-                        serviceName, page, size)
+                .uri("/api/services/{serviceName}/apis?keyword={keyword}&page={page}&size={size}",
+                        serviceName, keyword == null ? "" : keyword, page, size)
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {
                 });

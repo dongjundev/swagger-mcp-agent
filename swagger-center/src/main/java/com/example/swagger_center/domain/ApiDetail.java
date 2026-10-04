@@ -8,8 +8,11 @@ public record ApiDetail(
         String httpMethod,
         String path,
         String summary,
+        String description,
         List<ParameterInfo> parameters,
         Map<String, Object> requestBody,
-        Map<String, Object> responses
+        Map<String, Object> responses,
+        List<Map<String, List<String>>> security,
+        Map<String, Object> securitySchemes
 ) {
 }

@@ -11,6 +11,11 @@ spring:
         version: 1.0.0
         type: ASYNC
         protocol: STATELESS
+        instructions: >-
+          Looks up OpenAPI (Swagger) specs of the services registered in the Swagger Center.
+          Use it whenever the user asks about an API of these services or needs code that calls one.
+          Flow: listServices, then getApiList (narrow down with keyword), then getApiDetail,
+          then getComponentSchema for each $ref.
 
 swagger-center:
   base-url: http://localhost:8080

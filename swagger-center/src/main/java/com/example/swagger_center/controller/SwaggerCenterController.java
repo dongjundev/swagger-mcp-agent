@@ -34,9 +34,10 @@ public class SwaggerCenterController {
     @GetMapping("/services/{serviceName}/apis")
     public ResponseEntity<PagedResponse<ApiSummary>> getApiList(
             @PathVariable String serviceName,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(service.getApiList(serviceName, page, size));
+        return ResponseEntity.ok(service.getApiList(serviceName, keyword, page, size));
     }
 
     @GetMapping("/services/{serviceName}/apis/{operationId}")

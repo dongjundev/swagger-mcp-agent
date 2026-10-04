@@ -2,19 +2,22 @@ package com.example.swagger_center.parser;
 
 import com.example.swagger_center.domain.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.core.util.Json;
+import io.swagger.v3.core.util.Json31;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.SpecVersion;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
 @Component
 public class OpenApiParser {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<ApiSummary> extractApiSummaries(OpenAPI openAPI) {
         List<ApiSummary> summaries = new ArrayList<>();
@@ -27,7 +30,9 @@ public class OpenApiParser {
                         operationId,
                         method.toUpperCase(),
                         path,
-                        operation.getSummary()
+                        operation.getSummary(),
+                        operation.getTags(),
+                        operation.getDeprecated()
                 ));
             });
         });
@@ -47,7 +52,7 @@ public class OpenApiParser {
                 String resolvedId = resolveOperationId(operation, method, path);
 
                 if (resolvedId.equals(operationId)) {
-                    return buildApiDetail(operation, resolvedId, method, path);
+                    return buildApiDetail(openAPI, operation, resolvedId, method, path);
                 }
             }
         }
@@ -61,12 +66,7 @@ public class OpenApiParser {
         Schema<?> schema = openAPI.getComponents().getSchemas().get(schemaName);
         if (schema == null) return null;
 
-        return new ComponentSchema(
-                schemaName,
-                schema.getType(),
-                convertProperties(schema),
-                schema.getRequired()
-        );
+        return new ComponentSchema(schemaName, schemaToMap(mapperFor(openAPI), schema));
     }
 
     public List<String> listComponentSchemaNames(OpenAPI openAPI) {
@@ -85,7 +85,10 @@ public class OpenApiParser {
         return count;
     }
 
-    private ApiDetail buildApiDetail(Operation operation, String operationId, String method, String path) {
+    private ApiDetail buildApiDetail(OpenAPI openAPI, Operation operation,
+                                     String operationId, String method, String path) {
+        ObjectMapper mapper = mapperFor(openAPI);
+
         List<ParameterInfo> params = new ArrayList<>();
         if (operation.getParameters() != null) {
             for (Parameter p : operation.getParameters()) {
@@ -94,30 +97,55 @@ public class OpenApiParser {
                         p.getIn(),
                         Boolean.TRUE.equals(p.getRequired()),
                         p.getDescription(),
-                        schemaToMap(p.getSchema())
+                        schemaToMap(mapper, p.getSchema())
                 ));
             }
         }
 
         Map<String, Object> requestBody = null;
         if (operation.getRequestBody() != null) {
-            requestBody = objectMapper.convertValue(operation.getRequestBody(), Map.class);
+            requestBody = mapper.convertValue(operation.getRequestBody(), Map.class);
         }
 
         Map<String, Object> responses = null;
         if (operation.getResponses() != null) {
-            responses = objectMapper.convertValue(operation.getResponses(), Map.class);
+            responses = mapper.convertValue(operation.getResponses(), Map.class);
         }
+
+        List<SecurityRequirement> security = operation.getSecurity() != null
+                ? operation.getSecurity()
+                : openAPI.getSecurity();
 
         return new ApiDetail(
                 operationId,
                 method.toUpperCase(),
                 path,
                 operation.getSummary(),
+                operation.getDescription(),
                 params,
                 requestBody,
-                responses
+                responses,
+                security != null ? new ArrayList<>(security) : null,
+                resolveSecuritySchemes(openAPI, mapper, security)
         );
+    }
+
+    private Map<String, Object> resolveSecuritySchemes(OpenAPI openAPI, ObjectMapper mapper,
+                                                       List<SecurityRequirement> security) {
+        if (security == null || openAPI.getComponents() == null
+                || openAPI.getComponents().getSecuritySchemes() == null) {
+            return null;
+        }
+        Map<String, Object> schemes = new LinkedHashMap<>();
+        for (SecurityRequirement requirement : security) {
+            for (String name : requirement.keySet()) {
+                SecurityScheme scheme = openAPI.getComponents().getSecuritySchemes().get(name);
+                if (scheme != null) {
+                    schemes.put(name, mapper.convertValue(scheme, Map.class));
+                }
+            }
+        }
+        return schemes.isEmpty() ? null : schemes;
     }
 
     private Map<String, Operation> extractOperations(PathItem pathItem) {
@@ -140,19 +168,13 @@ public class OpenApiParser {
         return method.toLowerCase() + "_" + sanitized;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> convertProperties(Schema<?> schema) {
-        if (schema.getProperties() == null) return null;
-        Map<String, Object> result = new LinkedHashMap<>();
-        schema.getProperties().forEach((name, propSchema) -> {
-            result.put((String) name, schemaToMap((Schema<?>) propSchema));
-        });
-        return result;
+    private ObjectMapper mapperFor(OpenAPI openAPI) {
+        return openAPI.getSpecVersion() == SpecVersion.V31 ? Json31.mapper() : Json.mapper();
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> schemaToMap(Schema<?> schema) {
+    private Map<String, Object> schemaToMap(ObjectMapper mapper, Schema<?> schema) {
         if (schema == null) return null;
-        return objectMapper.convertValue(schema, Map.class);
+        return mapper.convertValue(schema, Map.class);
     }
 }

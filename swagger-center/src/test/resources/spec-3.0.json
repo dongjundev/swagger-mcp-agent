@@ -1,0 +1,76 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Payment API", "description": "결제 도메인 서비스", "version": "2.3.1"},
+  "servers": [{"url": "https://pay.dev.example.com"}],
+  "security": [{"bearerAuth": []}],
+  "paths": {
+    "/v1/payments/{paymentId}": {
+      "get": {
+        "tags": ["user"],
+        "operationId": "getPayment",
+        "summary": "결제 조회",
+        "description": "결제 단건을 조회한다. 취소된 결제는 status=CANCELLED 로 내려간다.",
+        "parameters": [{"name": "paymentId", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {
+          "200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Payment"}}}}
+        }
+      },
+      "delete": {
+        "tags": ["admin"],
+        "operationId": "deletePayment",
+        "summary": "결제 강제 삭제",
+        "deprecated": true,
+        "security": [{"adminKey": []}],
+        "parameters": [{"name": "paymentId", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"204": {"description": "No Content"}}
+      }
+    },
+    "/v1/payments": {
+      "post": {
+        "tags": ["user"],
+        "operationId": "createPayment",
+        "summary": "결제 생성",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreatePaymentRequest"}}}
+        },
+        "responses": {
+          "200": {"description": "OK", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Payment"}}}}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {"type": "http", "scheme": "bearer"},
+      "adminKey": {"type": "apiKey", "in": "header", "name": "X-Admin-Key"}
+    },
+    "schemas": {
+      "PaymentStatus": {"type": "string", "description": "결제 상태", "enum": ["PENDING", "PAID", "CANCELLED"]},
+      "BasePayment": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {"id": {"type": "string"}, "status": {"$ref": "#/components/schemas/PaymentStatus"}}
+      },
+      "Payment": {
+        "description": "결제",
+        "allOf": [
+          {"$ref": "#/components/schemas/BasePayment"},
+          {"type": "object", "properties": {"amount": {"type": "integer", "format": "int64"}}}
+        ]
+      },
+      "PaymentMethod": {
+        "oneOf": [{"$ref": "#/components/schemas/Card"}, {"$ref": "#/components/schemas/Bank"}],
+        "discriminator": {"propertyName": "kind"}
+      },
+      "Card": {"type": "object", "properties": {"kind": {"type": "string"}, "cardNo": {"type": "string"}}},
+      "Bank": {"type": "object", "properties": {"kind": {"type": "string"}, "account": {"type": "string"}}},
+      "PaymentList": {"type": "array", "items": {"$ref": "#/components/schemas/Payment"}},
+      "CreatePaymentRequest": {
+        "type": "object",
+        "required": ["amount", "method"],
+        "properties": {"amount": {"type": "integer"}, "method": {"$ref": "#/components/schemas/PaymentMethod"}}
+      }
+    }
+  }
+}
