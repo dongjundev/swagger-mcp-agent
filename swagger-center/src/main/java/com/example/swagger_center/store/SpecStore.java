@@ -8,14 +8,10 @@ import java.util.Optional;
 
 public interface SpecStore {
 
-    record StoredSpec(String serviceName, String version, OpenAPI parsedSpec, Instant registeredAt) {
+    record StoredSpec(String serviceName, String version, OpenAPI parsedSpec, Instant fetchedAt) {
     }
-
-    void save(StoredSpec spec);
 
     Optional<StoredSpec> findByServiceName(String serviceName);
 
     List<StoredSpec> findAll();
-
-    boolean delete(String serviceName);
 }

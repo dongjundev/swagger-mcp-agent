@@ -2,19 +2,15 @@ package com.example.swagger_center.service;
 
 import com.example.swagger_center.domain.*;
 import com.example.swagger_center.dto.PagedResponse;
-import com.example.swagger_center.dto.RegisterSpecRequest;
 import com.example.swagger_center.parser.OpenApiParser;
 import com.example.swagger_center.store.SpecStore;
 import com.example.swagger_center.store.SpecStore.StoredSpec;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -27,26 +23,6 @@ public class SwaggerCenterService {
 
     private final SpecStore specStore;
     private final OpenApiParser parser;
-
-    public ServiceInfo registerSpec(RegisterSpecRequest request) {
-        if (request.serviceName() == null || request.serviceName().isBlank()) {
-            throw new IllegalArgumentException("serviceName is required");
-        }
-
-        SwaggerParseResult result = new OpenAPIV3Parser().readContents(request.openApiJson());
-        OpenAPI openAPI = result.getOpenAPI();
-        if (openAPI == null) {
-            throw new IllegalArgumentException("Failed to parse OpenAPI spec: " + result.getMessages());
-        }
-
-        String version = openAPI.getInfo() != null ? openAPI.getInfo().getVersion() : "unknown";
-        Instant now = Instant.now();
-
-        StoredSpec stored = new StoredSpec(request.serviceName(), version, openAPI, now);
-        specStore.save(stored);
-
-        return toServiceInfo(stored);
-    }
 
     public List<ServiceInfo> listServices() {
         return specStore.findAll().stream()
@@ -92,10 +68,6 @@ public class SwaggerCenterService {
         return schema;
     }
 
-    public boolean deleteService(String serviceName) {
-        return specStore.delete(serviceName);
-    }
-
     private ServiceInfo toServiceInfo(StoredSpec stored) {
         OpenAPI openAPI = stored.parsedSpec();
         Info info = openAPI.getInfo();
@@ -106,7 +78,7 @@ public class SwaggerCenterService {
                 stored.version(),
                 openAPI.getServers() != null ? openAPI.getServers().stream().map(Server::getUrl).toList() : null,
                 parser.countApis(openAPI),
-                stored.registeredAt()
+                stored.fetchedAt()
         );
     }
 

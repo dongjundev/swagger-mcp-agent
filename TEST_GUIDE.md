@@ -9,8 +9,8 @@
     ↕ Streamable-HTTP (POST /mcp)
 [swagger-mcp :8081]  ← Tool 4개, Prompt 1개
     ↕ REST
-[swagger-center :8080]  ← 스펙 저장소
-    ↑ 스펙 등록 (curl)
+[swagger-center :8080]  ← 서비스 주소록 + 캐시
+    ↓ 조회 시 각 MS의 /v3/api-docs 를 가져옴
 [ms-user :8082] [ms-order :8083] [ms-product :8084]
 ```
 
@@ -36,7 +36,6 @@ cd ms-product && ../gradlew bootRun
 
 기동 확인:
 ```bash
-curl -s http://localhost:8080/api/services | jq .   # []
 curl -s http://localhost:8082/v3/api-docs | jq .info.title
 curl -s http://localhost:8083/v3/api-docs | jq .info.title
 curl -s http://localhost:8084/v3/api-docs | jq .info.title
@@ -44,35 +43,19 @@ curl -s http://localhost:8084/v3/api-docs | jq .info.title
 
 ---
 
-## Step 2: MS의 OpenAPI 스펙을 swagger-center에 등록
+## Step 2: swagger-center가 MS의 스펙을 가져오는지 확인
 
-각 MS의 `/v3/api-docs`에서 JSON을 가져와 swagger-center에 등록:
+등록 작업은 없다. swagger-center가 `swagger-center/src/main/resources/application.yaml`의
+`swagger-center.services`에 적힌 주소에서 조회 시점에 스펙을 가져온다.
 
 ```bash
-# ms-user 등록
-curl -X POST http://localhost:8080/api/specs \
-  -H "Content-Type: application/json" \
-  -d "$(jq -n --arg spec "$(curl -s http://localhost:8082/v3/api-docs)" \
-    '{serviceName: "ms-user", openApiJson: $spec}')"
-
-# ms-order 등록
-curl -X POST http://localhost:8080/api/specs \
-  -H "Content-Type: application/json" \
-  -d "$(jq -n --arg spec "$(curl -s http://localhost:8083/v3/api-docs)" \
-    '{serviceName: "ms-order", openApiJson: $spec}')"
-
-# ms-product 등록
-curl -X POST http://localhost:8080/api/specs \
-  -H "Content-Type: application/json" \
-  -d "$(jq -n --arg spec "$(curl -s http://localhost:8084/v3/api-docs)" \
-    '{serviceName: "ms-product", openApiJson: $spec}')"
-```
-
-등록 확인:
-```bash
-curl -s http://localhost:8080/api/services | jq .
+curl -s http://localhost:8080/api/services | jq '.[].serviceName'
 # → ms-user, ms-order, ms-product 3개 출력되어야 함
 ```
+
+가져온 스펙은 `swagger-center.cache-ttl`(기본 1분) 동안 캐시된다.
+- MS의 API가 바뀌면 캐시가 만료된 뒤 다음 조회부터 반영된다.
+- MS를 중지하면 캐시가 만료된 뒤 목록에서 빠지고, 다시 기동하면 자동으로 돌아온다.
 
 ---
 
@@ -162,7 +145,7 @@ Inspector에서 순차적으로:
 |---|------|------|
 | 1 | swagger-center 기동 (:8080) | ☐ |
 | 2 | ms-user/order/product 기동 (:8082-8084) | ☐ |
-| 3 | 3개 MS 스펙 등록 완료 | ☐ |
+| 3 | 등록 없이 3개 MS 스펙 조회됨 | ☐ |
 | 4 | swagger-center REST API 응답 정상 | ☐ |
 | 5 | swagger-mcp 기동 (:8081) | ☐ |
 | 6 | MCP Inspector 연결 성공 | ☐ |
@@ -175,6 +158,7 @@ Inspector에서 순차적으로:
 ## 트러블슈팅
 
 - **Connection refused**: 해당 포트의 서비스가 기동되었는지 확인
-- **Service not found**: Step 2의 스펙 등록이 완료되었는지 확인
+- **Service not found**: `swagger-center.services` 설정에 해당 서비스가 있는지 확인
+- **Failed to fetch spec (502)**: 해당 MS가 기동되어 있는지, 설정된 api-docs 주소가 맞는지 확인
 - **MCP Inspector 연결 실패**: Transport Type이 `Streamable HTTP`인지, URL이 `http://localhost:8081/mcp`인지 확인
-- **빈 응답**: swagger-center에 스펙이 등록된 상태에서 swagger-mcp를 기동해야 함 (swagger-mcp는 stateless이므로 순서 무관하지만 center에 데이터가 있어야 함)
+- **서비스 목록에 MS가 안 보임**: 스펙을 가져올 수 없는 MS는 목록에서 제외됨. swagger-center 로그의 `Skipping service` 경고 확인

@@ -10,6 +10,6 @@ public record ServiceInfo(
         String version,
         List<String> servers,
         int apiCount,
-        Instant registeredAt
+        Instant fetchedAt
 ) {
 }

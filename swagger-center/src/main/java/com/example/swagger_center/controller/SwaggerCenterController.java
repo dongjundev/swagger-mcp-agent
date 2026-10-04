@@ -4,7 +4,6 @@ import com.example.swagger_center.domain.ApiDetail;
 import com.example.swagger_center.domain.ComponentSchema;
 import com.example.swagger_center.domain.ServiceInfo;
 import com.example.swagger_center.dto.PagedResponse;
-import com.example.swagger_center.dto.RegisterSpecRequest;
 import com.example.swagger_center.domain.ApiSummary;
 import com.example.swagger_center.service.SwaggerCenterService;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +18,6 @@ import java.util.List;
 public class SwaggerCenterController {
 
     private final SwaggerCenterService service;
-
-    @PostMapping("/specs")
-    public ResponseEntity<ServiceInfo> registerSpec(@RequestBody RegisterSpecRequest request) {
-        ServiceInfo info = service.registerSpec(request);
-        return ResponseEntity.ok(info);
-    }
 
     @GetMapping("/services")
     public ResponseEntity<List<ServiceInfo>> listServices() {
@@ -52,13 +45,5 @@ public class SwaggerCenterController {
             @PathVariable String serviceName,
             @PathVariable String schemaName) {
         return ResponseEntity.ok(service.getComponentSchema(serviceName, schemaName));
-    }
-
-    @DeleteMapping("/services/{serviceName}")
-    public ResponseEntity<Void> deleteService(@PathVariable String serviceName) {
-        if (service.deleteService(serviceName)) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
     }
 }

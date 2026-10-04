@@ -3,27 +3,36 @@ package com.example.swagger_center.service;
 import com.example.swagger_center.Fixtures;
 import com.example.swagger_center.domain.ApiSummary;
 import com.example.swagger_center.domain.ServiceInfo;
-import com.example.swagger_center.dto.RegisterSpecRequest;
 import com.example.swagger_center.parser.OpenApiParser;
-import com.example.swagger_center.store.InMemorySpecStore;
+import com.example.swagger_center.store.SpecStore;
+import com.example.swagger_center.store.SpecStore.StoredSpec;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SwaggerCenterServiceTest {
 
-    private final SwaggerCenterService service =
-            new SwaggerCenterService(new InMemorySpecStore(), new OpenApiParser());
+    private final SpecStore specStore = mock(SpecStore.class);
+    private final SwaggerCenterService service = new SwaggerCenterService(specStore, new OpenApiParser());
 
     @BeforeEach
-    void registerFixture() {
-        service.registerSpec(new RegisterSpecRequest("payment", Fixtures.read("spec-3.0.json")));
+    void stubPaymentSpec() {
+        OpenAPI openAPI = new OpenAPIV3Parser().readContents(Fixtures.read("spec-3.0.json")).getOpenAPI();
+        StoredSpec payment = new StoredSpec("payment", "2.3.1", openAPI, Instant.now());
+        when(specStore.findByServiceName("payment")).thenReturn(Optional.of(payment));
+        when(specStore.findAll()).thenReturn(List.of(payment));
     }
 
     @Test
@@ -39,13 +48,6 @@ class SwaggerCenterServiceTest {
         assertThatThrownBy(() -> service.getApiList("payment", null, 0, size))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("size");
-    }
-
-    @Test
-    void rejectsRegistrationWithoutServiceName() {
-        assertThatThrownBy(() -> service.registerSpec(new RegisterSpecRequest(null, Fixtures.read("spec-3.0.json"))))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("serviceName");
     }
 
     @Test

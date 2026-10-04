@@ -7,6 +7,13 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+swagger-center:
+  cache-ttl: 1m
+  services:
+    ms-user: http://localhost:8082/v3/api-docs
+    ms-order: http://localhost:8083/v3/api-docs
+    ms-product: http://localhost:8084/v3/api-docs
+
 springdoc:
   use-fqn: true
   api-docs:
